@@ -54,15 +54,13 @@ void ScreenshotDialog::OnInit(wxInitDialogEvent& event)
 
 void ScreenshotDialog::SaveScreenshot()
 {
-	////Create a DC for the whole screen area
+	// Create a DC for the whole screen area
 	wxScreenDC dcScreen;
 
 	// When enable system font scales, the value is wrong.
-	////Get the size of the screen/DC
-	//wxCoord screenWidth, screenHeight;
-	//dcScreen.GetSize(&screenWidth, &screenHeight);
-	//screenWidth = 1960;
-	//screenHeight = 1080;
+	// Get the size of the screen/DC
+	// wxCoord screenWidth, screenHeight;
+	// dcScreen.GetSize(&screenWidth, &screenHeight);
 
 	DEVMODE mode;
 	EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &mode);
@@ -172,27 +170,6 @@ void ScreenshotDialog::OnMouseEvent(wxMouseEvent& event)
 		return;
 	}
 
-	//if (event.Moving()) {
-
-	//	wxClientDC dc(this);
-	//	
-	//	wxRect rect = this->GetRect();
-	//	bool ret = dc.Blit(rect.x, //Copy to this X coordinate
-	//		rect.y, //Copy to this Y coordinate
-	//		rect.width, //Copy this width
-	//		rect.height, //Copy this height
-	//		&memory_dc, //From where do we copy?
-	//		rect.x, //What's the X offset in the original DC?
-	//		rect.y  //What's the Y offset in the original DC?
-	//	);
-
-	//	wxPoint pt = event.GetPosition();
-	//	dc.DrawLine(wxPoint(0, pt.y), wxPoint(rect.width, pt.y));
-	//	dc.DrawLine(wxPoint(pt.x, 0), wxPoint(pt.x, rect.height));
-
-	//	return;
-	//}
-
 	if (event.Dragging()) {
 
 		wxClientDC dc(this);
@@ -220,6 +197,10 @@ void ScreenshotDialog::OnMouseEvent(wxMouseEvent& event)
 
 		memdc.SetBrush(*wxTRANSPARENT_BRUSH);
 		memdc.SetPen(*wxRED_PEN);
+
+		//	dc.DrawLine(wxPoint(0, pt.y), wxPoint(rect.width, pt.y));
+		//	dc.DrawLine(wxPoint(pt.x, 0), wxPoint(pt.x, rect.height));
+
 		memdc.DrawRectangle(pt1.x, pt1.y, pt.x - pt1.x, pt.y - pt1.y);
 
 		clip_rect = wxRect(pt1, pt);
@@ -236,5 +217,4 @@ void ScreenshotDialog::OnMouseEvent(wxMouseEvent& event)
 
 		return;
 	}
-	
 }

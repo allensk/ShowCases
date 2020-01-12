@@ -66,11 +66,6 @@ void CharStore::RemoveItem(wchar_t cha)
 
 }
 
-void CharStore::Sort()
-{
-
-}
-
 static bool is_file_exist(const char *fileName)
 {
 	std::ifstream infile(fileName);

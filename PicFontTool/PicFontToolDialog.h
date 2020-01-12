@@ -79,19 +79,6 @@ protected:
 	wxListBox* font_list;
 	wxStaticText* pattern_matrix;
 
-	void ConstructorInit();
-	/// 10 is random size
-	void GenerateSystemFonts(wxString fonts, wxString font_interface, int font_size = 10);
-	void RefreshStore();
-	void RefreshGreyZone();
-	void RefreshColorText(int i);
-	std::vector<std::pair<int, int>> GetCheckedColors();
-
-	/**
-	* Remove empty cell and retidy bitmap
-	*/
-	char* ClipZone(int width, int height, const char* pbuf);
-
 	// Virtual event handlers, overide them in your derived class
 	virtual void OnInit(wxInitDialogEvent& event);
 	virtual void OnClose(wxCloseEvent& event);
@@ -110,18 +97,39 @@ protected:
 	virtual void OnReadFonts(wxCommandEvent& event);
 	virtual void OnSaveFonts(wxCommandEvent& event);
 
+	void ConstructorInit();
+	void RefreshStore();
+	void RefreshGreyZone();
+	void RefreshColorText(int i);
+
+	/**
+	* Multiple colors can be selected to grey the zone.
+	*/
+	std::vector<std::pair<int, int>> GetCheckedColors();
+	
+	/**
+	* Generating font store by font interface.
+	*/
+	void GenerateSystemFonts(wxString fonts, wxString font_interface, int font_size = 10);
+
+	/**
+	* Remove empty cell and retidy bitmap.
+	*/
+	char* ClipZone(int width, int height, const char* pbuf);
+
 public:
 
 	PicFontToolDialog(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("PicFontTool"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(987, 605), long style = wxDEFAULT_DIALOG_STYLE);
 	~PicFontToolDialog();
 
 private:
+	// Control lists
 	std::vector<wxStaticText*> color_pics;
 	std::vector<wxTextCtrl*> color_texts;
 	std::vector<wxTextCtrl*> color_offsets;
 	std::vector<wxCheckBox*> color_checkboxes;
-	wxBitmap origin_bmp;
 	CharStore store;
+	wxBitmap origin_bmp;
 	HWND hwnd_pointed;
 	HWND hwnd_bound;
 	wxFileConfig* config = nullptr;

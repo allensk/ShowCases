@@ -38,13 +38,21 @@ public:
 
 	ScreenshotDialog(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(403, 305), long style = 0 | wxBORDER_NONE | wxWANTS_CHARS);
 	~ScreenshotDialog();
+
+	/**
+	* Get the bitmap clipped
+	*/
 	wxBitmap GetClippedBitmap();
+
+	/**
+	* Get the clipped area coordinates
+	*/
 	wxRect GetClippedRect();
 
 private:
-	wxMemoryDC memory_dc;
-	wxPoint pt1;
-	wxPoint pt2;
-	wxRect clip_rect;
 	bool mouse_down;
+	wxMemoryDC memory_dc;	/**< Temporary dc */
+	wxPoint pt1;			/**< Mouse drag point */
+	wxPoint pt2;			/**< Mouse drop point */
+	wxRect clip_rect;		/**< Clip bitmap rectangle zone */
 };

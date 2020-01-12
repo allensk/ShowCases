@@ -881,7 +881,7 @@ void PicFontToolDialog::DClickCha(wxCommandEvent& event)
 
 void PicFontToolDialog::RefreshStore()
 {
-	for (auto& x : store.chas) {
+	for (auto& x : store.GetChas()) {
 		wxString trans;
 		CharItem item = const_cast<CharItem&>(x);
 		trans.Printf("%s|%d:%d", item.GetPatternName().c_str(),
