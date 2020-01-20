@@ -17,6 +17,8 @@
 #include "ScreenshotDialog.h"
 #include "PickColorDialog.h"
 
+#include <cmath>
+
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -895,6 +897,54 @@ char* PicFontToolDialog::ClipZone(int width, int height, const char* pbuf)
 	return nullptr;
 }
 
+void print_bits_bitmap(int weight, int height, vector<char> cha)
+{
+	int cha_row_byte_count = ((weight * 24 + 31) & ~31) >> 3;
+
+	std::string str;
+	char* p = nullptr;
+	for (int j = 0; j < height; ++j) {
+		p = cha.data() + cha_row_byte_count * j;
+		for (int i = 0; i < weight; ++i) {
+			unsigned char c = *(p);
+			unsigned char d = *(p + 1);
+			unsigned char e = *(p + 2);
+			char buf[10];
+			sprintf(buf, "%02X%02X%02X ", c, d, e);
+			str += buf;
+
+			p = p + 3;
+		}
+
+		str += '\n';
+	}
+	wxLogDebug("%s", str.c_str());
+}
+
+void print_bits_matrix(int weight, int height, vector<char> cha)
+{
+	int cha_row_byte_count = ((weight * 24 + 31) & ~31) >> 3;
+
+	std::string str;
+	char* p = nullptr;
+	for (int j = 0; j < height; ++j) {
+		p = cha.data() + weight * j * 3;
+		for (int i = 0; i < weight; ++i) {
+			unsigned char c = *(p);
+			unsigned char d = *(p + 1);
+			unsigned char e = *(p + 2);
+			char buf[10];
+			sprintf(buf, "%02X%02X%02X ", c, d, e);
+			str += buf;
+
+			p = p + 3;
+		}
+
+		str += '\n';
+	}
+	wxLogDebug("%s", str.c_str());
+}
+
 
 void PicFontToolDialog::GenerateSystemFonts(wxString fonts, wxString font_interface, int font_size)
 {
@@ -945,7 +995,6 @@ void PicFontToolDialog::GenerateSystemFonts(wxString fonts, wxString font_interf
 		bmp_info.bmiHeader.biPlanes = 1;
 		bmp_info.bmiHeader.biClrUsed = 0;
 
-		// Have to use DIB_PAL_COLORS
 		int row_byte_count = ((bmp_width * bmp_info.bmiHeader.biBitCount + 31) & ~31) >> 3;
 		int byte_count = bmp_height * row_byte_count;
 		char* pbuf = new char[byte_count] {0};
@@ -992,6 +1041,8 @@ void PicFontToolDialog::GenerateSystemFonts(wxString fonts, wxString font_interf
 			pbuf + (area_bottom - 1) * row_byte_count,
 			v_cell_span * row_byte_count);
 		item.SetBits(bits);
+
+		//print_bits_bitmap(bmp_width, v_cell_span, bits);
 		
 		store.AddItem(item);
 		delete[] pbuf;
@@ -1032,7 +1083,6 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 	bmp_info.bmiHeader.biPlanes = 1;
 	bmp_info.bmiHeader.biClrUsed = 0;
 
-	// Have to use DIB_PAL_COLORS
 	int row_byte_count = ((bmp_info.bmiHeader.biWidth * bmp_info.bmiHeader.biBitCount + 31) & ~31) >> 3;
 	int byte_count = bmp_info.bmiHeader.biHeight * row_byte_count;
 	char* pbuf = new char[byte_count] {0};
@@ -1046,11 +1096,9 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 	for (int j = 0; j < zone_height; ++j) {
 		std::vector<char> row;
 		ptmp = pbuf + j * row_byte_count;
-		for (int i = 0; i < zone_width; ++i) {
-			row.push_back(ptmp[i * 3]);
-			row.push_back(ptmp[i * 3 + 1]);
-			row.push_back(ptmp[i * 3 + 2]);
-		}
+		row.resize(zone_width * 3);
+		memcpy_s(row.data(), zone_width * 3, ptmp, zone_width * 3);
+
 		zone_matrix.push_back(row);
 	}
 
@@ -1061,88 +1109,64 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 		int cha_width = d.first;
 		int cha_height = d.second;
 
-		// Construct block array
-		std::vector<char> cha;
-		// cha.resize(cha_width * 3 * cha_height);
+		int cha_row_byte_count = ((cha_width * bmp_info.bmiHeader.biBitCount + 31) & ~31) >> 3;
+		int byte_append_num = cha_row_byte_count - cha_width * 3;
 
 		std::vector<std::vector<char>> chas;
-		for (int j = 0; j < zone_height; ++j) {
-
-			// Skip block contain no integer character
-			if (j + cha_height > zone_height)
-				break;
-
-			for (int i = 0; i < zone_width; ++i) {
-				cha.clear();
-
-				// Skip block contain no integer character
-				if (i + cha_width > zone_width)
-					break;
-
+		for (int j = 0; j < zone_height - cha_height + 1; ++j) {
+			for (int i = 0; i < zone_width - cha_width + 1; ++i) {
+				// Construct block array
+				std::vector<char> cha(cha_row_byte_count * cha_height, 0);
+				
+				char* ptmp2 = nullptr;
 				for (int y = 0; y < cha_height; ++y) {
-					for (int x = 0; x < cha_width; ++x) {
-						cha.push_back(zone_matrix[j + y][i + cha_width * 3]);
-						cha.push_back(zone_matrix[j + y][i + cha_width * 3 + 1]);
-						cha.push_back(zone_matrix[j + y][i + cha_width * 3 + 2]);
-					}
+					ptmp2 = &zone_matrix[j + y][i * 3];
+					cha.resize(cha_row_byte_count * cha_height);
+					memcpy_s(cha.data() + cha_row_byte_count * y, cha_width * 3, ptmp2, cha_width * 3);
 				}
 
-				// Constructor bitmap bits
-				int cha_row_byte_count = ((cha_width * bmp_info.bmiHeader.biBitCount + 31) & ~31) >> 3;
-				if (cha_width * 3 == cha_row_byte_count) {
-					chas.push_back(cha);
-				}
-				else {
-					std::vector<char> cha_bitmap;
-					for (int y = 0; y < cha_height; ++y) {
-						for (int x = 0; x < cha_width; ++x) {	
-							cha_bitmap.push_back(cha[y * cha_width * 3 + x]);
-							cha_bitmap.push_back(cha[y * cha_width * 3 + x + 1]);
-							cha_bitmap.push_back(cha[y * cha_width * 3 + x + 2]);
-						}
-						int byte_append_num = cha_row_byte_count - cha_width * 3;
-						for (int k = 0; k < byte_append_num; ++k)
-							cha_bitmap.push_back(0);
-					}
-					chas.push_back(cha_bitmap);
-				}	
+				chas.push_back(cha);
 			}
 		}
 
 		int k = 0;
 		for (auto& x : chas) {
 			++k;
-			wxMemoryDC mem_dc;
-			wxBitmap mem_bitmap(cha_width, cha_height, -1);
-			mem_dc.SelectObject(mem_bitmap);
 
-			BITMAPINFO bmp_info = {};
-			bmp_info.bmiHeader.biSize = sizeof(bmp_info.bmiHeader);
-			bmp_info.bmiHeader.biBitCount = 24;
-			bmp_info.bmiHeader.biCompression = BI_RGB;
-			bmp_info.bmiHeader.biWidth = cha_width;
-			bmp_info.bmiHeader.biHeight = cha_height; // Up-bottom bitmap
-			bmp_info.bmiHeader.biPlanes = 1;
-			bmp_info.bmiHeader.biClrUsed = 0;
+			//wxMemoryDC mem_dc;
+			//wxBitmap mem_bitmap(cha_width, cha_height, -1);
+			//mem_dc.SelectObject(mem_bitmap);
 
-			HBITMAP hbitmap = wxDIB::ConvertToBitmap(&bmp_info, mem_dc.GetHDC(),
-				(void *)x.data());
-			::SelectObject(mem_dc.GetHDC(), hbitmap);
+			//BITMAPINFO bmp_info = {};
+			//bmp_info.bmiHeader.biSize = sizeof(bmp_info.bmiHeader);
+			//bmp_info.bmiHeader.biBitCount = 24;
+			//bmp_info.bmiHeader.biCompression = BI_RGB;
+			//bmp_info.bmiHeader.biWidth = cha_width;
+			//bmp_info.bmiHeader.biHeight = cha_height; // Up-bottom bitmap
+			//bmp_info.bmiHeader.biPlanes = 1;
+			//bmp_info.bmiHeader.biClrUsed = 0;
 
-			DeleteObject(hbitmap);
+			//HBITMAP hbitmap = wxDIB::ConvertToBitmap(&bmp_info, mem_dc.GetHDC(),
+			//	(void *)x.data());
+			//::SelectObject(mem_dc.GetHDC(), hbitmap);
 
-			wxString name;
-			name.Printf("pic/block_bmp%d.bmp", k);
-			mem_dc.GetAsBitmap().SaveFile(name, wxBITMAP_TYPE_BMP);
+			//DeleteObject(hbitmap);
 
-			/*CharItem item;
-			item.SetBits(x);*/
+			//wxString name;
+			//name.Printf("pic/block_bmp%d.bmp", k);
+			//mem_dc.GetAsBitmap().SaveFile(name, wxBITMAP_TYPE_BMP);
+
+			//wxClientDC dc(pattern_matrix);
+			//dc.Clear();
+			//::SelectObject(dc.GetHDC(), hbitmap);
+
+			CharItem item;
+			item.SetBits(x);
 			
-			/*CharItem* pout = nullptr;
+			CharItem* pout = nullptr;
 			if (store.DetectFont(item, &pout)) {
 				detected_chas.push_back(pout->GetChar());
-			}*/
-			
+			}
 		}
 	}
 
@@ -1164,7 +1188,7 @@ void PicFontToolDialog::OnGenerateFonts(wxCommandEvent& event)
 		input = "10";
 	}
 
-	GenerateSystemFonts("w", "宋体", 10);
+	GenerateSystemFonts("w我在", "宋体", 10);
 }
 
 void PicFontToolDialog::OnReadFonts(wxCommandEvent& event)
