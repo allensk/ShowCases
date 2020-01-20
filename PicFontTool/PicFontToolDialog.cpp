@@ -18,6 +18,7 @@
 #include "PickColorDialog.h"
 
 #include <cmath>
+#include <chrono>
 
 using namespace std;
 
@@ -1057,6 +1058,9 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 	if (!origin_bmp.IsOk())
 		return;
 
+	using namespace std::chrono;
+	steady_clock::time_point tp1 = steady_clock::now();
+
 	wxClientDC dc(grey_zone);
 	int zone_width = origin_bmp.GetSize().x;
 	int zone_height = origin_bmp.GetSize().y;
@@ -1094,16 +1098,16 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 	std::vector<std::vector<char>> zone_matrix;
 	char* ptmp = pbuf;
 	for (int j = 0; j < zone_height; ++j) {
-		std::vector<char> row;
+		std::vector<char> row(zone_width * 3);
 		ptmp = pbuf + j * row_byte_count;
-		row.resize(zone_width * 3);
 		memcpy_s(row.data(), zone_width * 3, ptmp, zone_width * 3);
-
 		zone_matrix.push_back(row);
 	}
 
 	std::vector<wchar_t> detected_chas;
-	// 
+
+	// For each dimension in fonts store, computer matrix hashes,
+	// and find text.
 	auto dimensions = store.GetDimensions();
 	for (auto d : dimensions) {
 		int cha_width = d.first;
@@ -1115,6 +1119,7 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 		std::vector<std::vector<char>> chas;
 		for (int j = 0; j < zone_height - cha_height + 1; ++j) {
 			for (int i = 0; i < zone_width - cha_width + 1; ++i) {
+				
 				// Construct block array
 				std::vector<char> cha(cha_row_byte_count * cha_height, 0);
 				
@@ -1129,47 +1134,16 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 			}
 		}
 
-		int k = 0;
+
+		CharItem item;
 		for (auto& x : chas) {
-			++k;
-
-			//wxMemoryDC mem_dc;
-			//wxBitmap mem_bitmap(cha_width, cha_height, -1);
-			//mem_dc.SelectObject(mem_bitmap);
-
-			//BITMAPINFO bmp_info = {};
-			//bmp_info.bmiHeader.biSize = sizeof(bmp_info.bmiHeader);
-			//bmp_info.bmiHeader.biBitCount = 24;
-			//bmp_info.bmiHeader.biCompression = BI_RGB;
-			//bmp_info.bmiHeader.biWidth = cha_width;
-			//bmp_info.bmiHeader.biHeight = cha_height; // Up-bottom bitmap
-			//bmp_info.bmiHeader.biPlanes = 1;
-			//bmp_info.bmiHeader.biClrUsed = 0;
-
-			//HBITMAP hbitmap = wxDIB::ConvertToBitmap(&bmp_info, mem_dc.GetHDC(),
-			//	(void *)x.data());
-			//::SelectObject(mem_dc.GetHDC(), hbitmap);
-
-			//DeleteObject(hbitmap);
-
-			//wxString name;
-			//name.Printf("pic/block_bmp%d.bmp", k);
-			//mem_dc.GetAsBitmap().SaveFile(name, wxBITMAP_TYPE_BMP);
-
-			//wxClientDC dc(pattern_matrix);
-			//dc.Clear();
-			//::SelectObject(dc.GetHDC(), hbitmap);
-
-			CharItem item;
 			item.SetBits(x);
-			
 			CharItem* pout = nullptr;
 			if (store.DetectFont(item, &pout)) {
 				detected_chas.push_back(pout->GetChar());
 			}
 		}
 	}
-
 
 	delete[] pbuf;
 
@@ -1178,6 +1152,10 @@ void PicFontToolDialog::OnOCR(wxCommandEvent& event)
 		show += x;
 	}
 
+	steady_clock::time_point tp2 = steady_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(tp2 - tp1);
+	show += "\n";
+	show += std::to_string(time_span.count());
 	identified_fonts->SetLabelText(show);
 }
 
@@ -1188,7 +1166,7 @@ void PicFontToolDialog::OnGenerateFonts(wxCommandEvent& event)
 		input = "10";
 	}
 
-	GenerateSystemFonts("w我在", "宋体", 10);
+	GenerateSystemFonts("我在测试", "宋体", 10);
 }
 
 void PicFontToolDialog::OnReadFonts(wxCommandEvent& event)
